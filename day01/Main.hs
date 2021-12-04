@@ -1,13 +1,12 @@
 module Main where
 
 main :: IO ()
-main =
-    do
-        contents <- readFile "input"
-        let nums = map read . lines $ contents
+main = do
+    contents <- readFile "input"
+    let nums = map read . lines $ contents
 
-        putStrLn $ "Part 1: " ++ solve1 nums
-        putStrLn $ "Part 2: " ++ solve2 nums
+    putStrLn $ "Part 1: " ++ solve1 nums
+    putStrLn $ "Part 2: " ++ solve2 nums
 
 
 getWindowList :: Int -> [a] -> [[a]]
