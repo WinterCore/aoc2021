@@ -43,27 +43,27 @@ shake predicate i bins =
         . filterBitAtIndex (head . show $ prominent) i
         $ bins
     where
-        prominent = predicate
-                    . binToBitStates
-                    . (!! i)
-                    . transpose
-                    $ bins
         filterBitAtIndex b i = filter ((== b) . (!! i))
-        bitLength = length . head $ bins
+        bitLength            = length . head $ bins
+        prominent            = predicate
+                               . binToBitStates
+                               . (!! i)
+                               . transpose
+                               $ bins
 
 solve2 :: [String] -> String
 solve2 bins = show . uncurry (*) $ (oxygen bins, co2 bins)
     where
-        oxygen = getRating oxygenPredicate
-        co2 = getRating co2Predicate
+        oxygen              = getRating oxygenPredicate
+        co2                 = getRating co2Predicate
         getRating predicate = binToInt
                               . map digitToInt
                               . head
                               . shake predicate 0
         oxygenPredicate (a, b)
-            | a == b = 1
+            | a == b    = 1
             | otherwise = fst . toProminent $ (a, b)
         co2Predicate (a, b)
-            | a == b = 0
+            | a == b    = 0
             | otherwise = snd . toProminent $ (a, b)
         
