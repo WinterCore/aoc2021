@@ -2,7 +2,6 @@
 module Main where
 
 import Data.List (groupBy, intercalate, transpose, find, findIndices, (\\))
-import Debug.Trace
 import Control.Arrow ((&&&), arr)
 
 
