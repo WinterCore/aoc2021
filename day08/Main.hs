@@ -2,9 +2,11 @@ module Main where
 
 import Debug.Trace
 import qualified Data.Map as M
-import Data.List (union, (\\), intersect, sortOn)
+import Data.List (union, (\\), intersect, concat, sortOn, find, sort)
 import Data.Tuple (swap)
 import Data.Ord
+
+-- The solution for part 2 is absolute garbage, it took me 2 days to solve that shit
 
 split :: Char -> String -> [String]
 split _ ""          = []
@@ -26,13 +28,13 @@ digitSegmentsList = [ (0, "abcefg")
                     , (9, "abcdfg")
                     ]
 
-digitSegmentsMap :: M.Map Int [Char]
+digitSegmentsMap :: M.Map Int String
 digitSegmentsMap = M.fromList digitSegmentsList
 
-reverseDigitSegmentsMap :: M.Map [Char] Int
+reverseDigitSegmentsMap :: M.Map String Int
 reverseDigitSegmentsMap = M.fromList . map swap $ digitSegmentsList
 
-digitSegmentsCharCountMap :: M.Map Int [[Char]]
+digitSegmentsCharCountMap :: M.Map Int [String]
 digitSegmentsCharCountMap = M.fromListWith (++)
                             . map (\(x, y) -> (length y, [y]))
                             $ digitSegmentsList
@@ -41,7 +43,7 @@ data SignalLine = SignalLine { input :: [String]
                              , output :: [String]
                              } deriving (Show)
 
-type PossibilityMap = M.Map Char [Char]
+type PossibilityMap = M.Map Char String
 
 parseSignalLine :: String -> SignalLine
 parseSignalLine s = case split '|' s of
@@ -51,7 +53,7 @@ parseSignalLine s = case split '|' s of
 
 main :: IO ()
 main = do
-    contents <- readFile "exampleinput"
+    contents <- readFile "input"
     let signalLines = map parseSignalLine . lines $ contents
 
     putStrLn $ "Part 1: " ++ solve1 signalLines
@@ -74,48 +76,61 @@ buildPossibilityMap (s:ss) m = buildPossibilityMap ss updatedMap
           updatedMap  = foldr folder m s
           folder k om = case M.lookup k om of
                                 Just d  -> M.insert k (d `intersect` currSegs) om
-                                Nothing -> M.insert k currSegs om 
-          -- debug       = traceShow (s ++ "-" ++ currSegs ++ "--------- after:" ++ show updatedMap)
+                                Nothing -> M.insert k currSegs om
 
+getCombinations :: [String] -> [String]
+getCombinations []     = []
+getCombinations [x]    = map (:[]) x
+getCombinations (s:ss) = foldr folder [] s
+    where rest                 = getCombinations ss
+          folder x             = (++) (combineWithoutDups x)
+          combineWithoutDups c = foldr (\x a -> if c `elem` x then a else (c:x):a) [] rest
+
+lookupWithError :: Ord k => k -> M.Map k a -> a
+lookupWithError k m = case M.lookup k m of Just x -> x
+                                           Nothing -> error "Key not found"
+
+translateEncoding :: String -> String -> String
+translateEncoding key = sort . map (`lookupWithError` translationMap)
+    where translationMap = M.fromList . zip ['a'..'g'] $ key
+
+
+isCombinationValid :: [String] -> String -> Bool
+isCombinationValid [] cb       = True
+isCombinationValid (ts:tss) cb = M.member translated reverseDigitSegmentsMap 
+                                 && isCombinationValid tss cb
+    where translated = translateEncoding cb ts
+
+findValidCombination :: [String] -> [String] -> String
+findValidCombination tss cbs = case find (isCombinationValid tss) cbs of Just cb -> cb
+                                                                         Nothing -> error "Couldn't find combination"
+
+-- The following function is a disaster, I've written it and I have no idea how it works
 reducePossibilityMap :: PossibilityMap -> PossibilityMap
-reducePossibilityMap m = foldr folder m sorted
-    where sorted = traceShowId . sortOn (Down . length . snd) . M.toList $ m
-          folder (k, segs) a = M.insert k segs
-                               . M.map (\\ segs)
-                               . M.delete k
-                               $ a
+reducePossibilityMap m = foldr folder m sortedKeys
+    where sortedKeys = map fst . sortOn (Down . length . snd) . M.toList $ m
+          folder k a = let segs = M.findWithDefault "" k a
+                       in M.insert k segs
+                          . M.map (diff segs)
+                          . M.delete k
+                          $ a
+          diff segs x = if null (x \\ segs) && null (segs \\ x) then x else x \\ segs
+
+segsToNumbers :: [String] -> Int
+segsToNumbers = foldr folder 0 . reverse
+    where folder x a = (+ (a * 10)) . lookupWithError x $ reverseDigitSegmentsMap
 
 solve2 :: [SignalLine] -> String
-solve2 [] = "wtf"
-solve2 (SignalLine { input = i, output = o} : ss) = show
-                                                    . reducePossibilityMap
-                                                    $ buildPossibilityMap i M.empty
-
--- eafb cagedb ab
-
--- 0 -> [a, b, c, e, f, g]
--- 1 -> [c, f]
--- 2 -> [a, c, d, e, g]
--- 3 -> [a, c, d, f, g]
--- 4 -> [b, c, d, f]
--- 5 -> [a, b, d, f, g]
--- 6 -> [a, b, d, e, f, g]
--- 7 -> [a, c, f]
--- 8 -> [a, b, c, d, e, f, g]
--- 9 -> [a, b, c, d, f, g]
-
--- a -> [a, b, c, d, e, f, g]
--- b -> [b, c, d, e, f]
--- c -> [b, c, d, e, f]
--- d -> [b, c, d, e, f]
--- e -> [b, c, d, e, f]
--- f -> [b, c, d, e, f]
--- g -> [a, b, c, d, e, f, g]
-
--- Steps
--- Find all digits that require the same number of segments
--- Mix them up and remove duplicates
--- Create a map of all the combinations of the letters
--- repeat
-
--- reduce by starting from the least possibilities and removing them from the others
+solve2 []  = "Not found"
+solve2 sls = show . sum . map solve $ sls
+    where solve sl         = let key = findDecodeKey $ input sl
+                                 out = segsToNumbers . map (translateEncoding key) $ output sl
+                             in out
+          translate key    = translateEncoding key 
+          findDecodeKey ss = findValidCombination ss
+                             . getCombinations
+                             . map snd
+                             . sortOn fst
+                             . M.toList
+                             . reducePossibilityMap
+                             $ buildPossibilityMap ss M.empty
