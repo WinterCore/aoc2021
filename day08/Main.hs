@@ -6,7 +6,7 @@ import Data.List (union, (\\), intersect, concat, sortOn, find, sort)
 import Data.Tuple (swap)
 import Data.Ord
 
--- The solution for part 2 is absolute garbage, it took me 2 days to solve that shit
+-- This shit was a disaster, it took me 2 days to get it to work
 
 split :: Char -> String -> [String]
 split _ ""          = []
@@ -105,7 +105,8 @@ findValidCombination :: [String] -> [String] -> String
 findValidCombination tss cbs = case find (isCombinationValid tss) cbs of Just cb -> cb
                                                                          Nothing -> error "Couldn't find combination"
 
--- The following function is a disaster, I've written it and I have no idea how it works
+-- The following function reduces a possibility map to make it easier to saerch
+-- for the correct mapping
 reducePossibilityMap :: PossibilityMap -> PossibilityMap
 reducePossibilityMap m = foldr folder m sortedKeys
     where sortedKeys = map fst . sortOn (Down . length . snd) . M.toList $ m
