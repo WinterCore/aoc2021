@@ -5,8 +5,8 @@ import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Maybe (mapMaybe)
-import Control.Arrow (arr, (&&&))
-import Data.List (intercalate, sortOn, nubBy, sortOn)
+import Control.Arrow ((&&&))
+import Data.List (nubBy, sortOn)
 
 
 type Point = (Int, Int)
