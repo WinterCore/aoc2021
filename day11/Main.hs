@@ -4,15 +4,18 @@ import Data.Map (Map)
 import Data.Set (Set)
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Debug.Trace
+import Data.List (find)
+import Data.Maybe (fromJust)
+import Control.Arrow (first)
+import Data.Tuple (swap)
 
 main :: IO ()
 main = do
     contents <- readFile "input"
-    let grid = map (map (read . (:[]))) . lines $ contents :: [[Int]]
+    let grid = map (map (read . (:[]))) . lines $ contents
 
     putStrLn $ "Part 1: " ++ solve1 grid
-    putStrLn $ "Part 2: " ++ "to be implemented"
+    putStrLn $ "Part 2: " ++ solve2 grid
     return ()
 
 
@@ -75,3 +78,13 @@ solve1 grid = show
     . simulate 100
     $ coordsMap
     where coordsMap = listToCoordsMap grid
+
+solve2 :: [[Int]] -> String
+solve2 grid = show
+    . fst
+    . fromJust
+    . find (isFullFlash . snd)
+    . scanl (curry (swap . first (fst . simulate 1 . snd))) (0, coordsMap)
+    $ [1..]
+    where coordsMap   = listToCoordsMap grid
+          isFullFlash = all (== 0) . M.elems
