@@ -76,7 +76,7 @@ walkBasin BasinWalker { visited    = vs
                       , basin      = bs } cm = walkBasin (BasinWalker { visited = newVs, remaining = rs ++ adjCells, basin = (x, y):bs }) cm
     where newVs     = foldr S.insert vs adjCells
           adjCells  = map fst
-                      . filter (uncurry (&&) . ((< 9). snd &&& (`S.notMember` vs) . fst))
+                      . filter (uncurry (&&) . ((< 9) . snd &&& (`S.notMember` vs) . fst))
                       . mapMaybe (liftSndMaybe . (id &&& (`M.lookup` cm)))
                       $ [(x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1)]
 
