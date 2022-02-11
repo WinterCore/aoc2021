@@ -66,12 +66,6 @@ simulate n m = (rm, fc + S.size fs)
     where (rm, fc) = simulate (n - 1) cm
           (cm, fs) = simulateRecursive S.empty . M.map (+ 1) $ m
 
-group :: Int -> [a] -> [[a]]
-group _ [] = []
-group n l
-  | n > 0 = take n l : group n (drop n l)
-  | otherwise = error "Negative or zero n"
-
 solve1 :: [[Int]] -> String
 solve1 grid = show
     . snd
