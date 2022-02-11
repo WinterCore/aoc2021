@@ -24,7 +24,7 @@ liftSndMaybe (x, y) =
 main :: IO ()
 main = do
     contents <- readFile "input"
-    let grid = map (map (read . (:[]))) . lines $ contents :: [[Int]]
+    let grid = map (map (read . (:[]))) . lines $ contents
 
 
     putStrLn $ "Part 1: " ++ solve1 grid
