@@ -8,6 +8,9 @@ import qualified Data.Set as S
 import Control.Arrow (second, (&&&))
 import Data.Tuple (swap)
 import Data.Char
+import Data.List
+
+-- Part 2 needs optimization, it takes around 3-4 seconds to run
 
 split :: Char -> String -> [String]
 split _ ""          = []
@@ -26,7 +29,7 @@ main = do
     let edges = mapMaybe (toPair . split '-') . lines $ contents
 
     putStrLn $ "Part 1: " ++ solve1 edges
-    putStrLn $ "Part 2: " ++ "to be implemented"
+    putStrLn $ "Part 2: " ++ solve2 edges
     return ()
 
 type Edge = (String, String)
@@ -56,3 +59,30 @@ solve1 xs = show
     . findPossiblePaths em S.empty
     $ "start"
     where em = edgeListToEdgeMap xs
+
+findPossiblePaths2 :: EdgeMap -> Map String Int -> String -> String -> [[String]]
+findPossiblePaths2 m vm x2 "end" = [["end"]]
+findPossiblePaths2 m vm x2 start =
+    case M.lookup start vm of
+        Just x  -> if x < 1 || (start == x2 && x < 2) then combs else [[]]
+        Nothing -> combs
+    where combs     = map ([start] ++) rest
+          nodes     = M.findWithDefault [] start m
+          rest      = concatMap (findPossiblePaths2 m updatedVm x2) nodes
+          updatedVm = if all isLower start
+                      then M.alter vmUpdater start vm
+                      else vm
+          vmUpdater x = case x of
+                          Just y  -> Just (y + 1)
+                          Nothing -> Just 1
+
+solve2 :: [Edge] -> String
+solve2 xs = show
+    . S.size
+    -- Move the data into a set to remove dups cuz nub is so fucking slow
+    . S.fromList
+    . filter ((== "end") . last)
+    . concatMap (flip (findPossiblePaths2 em M.empty) "start")
+    $ small
+    where em = edgeListToEdgeMap xs
+          small = filter (uncurry (&&) . (all isLower &&& (`notElem` ["start", "end"]))) . M.keys $ em
