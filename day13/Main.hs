@@ -79,7 +79,7 @@ solve2 coords =
 splitEvery :: Int -> [a] -> [[a]]
 splitEvery _ [] = []
 splitEvery n xs = as : splitEvery n bs 
-  where (as,bs) = splitAt n xs
+    where (as, bs) = splitAt n xs
 
 showGrid :: (Int, Int) -> DotsSet -> String
 showGrid (mx, my) ds = intercalate "\n" . splitEvery (mx * 2) . map getCell $ grid
