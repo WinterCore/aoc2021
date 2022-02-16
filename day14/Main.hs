@@ -1,8 +1,9 @@
+{-# LANGUAGE TupleSections #-}
 module Main where
 
-import Control.Arrow
 import Data.Map (Map)
 import qualified Data.Map as M
+import Control.Arrow ((&&&))
 
 type Polymer = String
 type PairRule = (String, String)
@@ -13,13 +14,13 @@ strToPairRule = (head &&& last) . words
 
 main :: IO ()
 main = do
-    contents <- readFile "exampleinput"
+    contents <- readFile "input"
     let input = lines contents
     let polymer = head input
     let rules = map strToPairRule . filter (not . null) . tail $ input
 
 
-    putStrLn $ "Part 1: " ++ solve1 polymer rules
+    putStrLn $ "Part 1: " ++ solve1 rules polymer
     putStrLn $ "Part 2: " ++ "to be implemented"
 
 
@@ -29,12 +30,22 @@ windowOf _ [x] = []
 windowOf n xs = take n xs : windowOf n (tail xs)
     where (as, bs) = splitAt n xs
 
-simulateStep :: Polymer -> PairRuleMap -> Polymer
-    simulateStep ss prm = foldl 
+simulateStep :: PairRuleMap -> Polymer -> Polymer
+simulateStep prm ss = foldl folder [head ss] pairs
     where pairs  = windowOf 2 ss
-          folder a x = 
+          folder a x = case M.lookup x prm of
+                         Just val -> a ++ val ++ [last x]
+                         Nothing  -> a ++ [last x]
 
-solve1 :: Polymer -> [PairRule] -> String
-solve1 s prs = show
-    $ windowOf 2 s
+solve1 :: [PairRule] -> Polymer -> String
+solve1 prs = show
+    . uncurry (-)
+    . (maximum &&& minimum)
+    . M.elems
+    . M.fromListWith (+)
+    . map (, 1)
+    . last
+    . take (10 -- The number of steps
+            + 1)
+    . iterate (simulateStep rulesMap)
     where rulesMap = M.fromList prs
