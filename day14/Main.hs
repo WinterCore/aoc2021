@@ -4,13 +4,15 @@ module Main where
 import Data.Map (Map)
 import qualified Data.Map as M
 import Control.Arrow ((&&&))
+import Data.List (nub)
 
-type Polymer = String
 type PairRule = (String, String)
 type PairRuleMap = Map String String
+type PolymerPairMap = Map String Int
+type LetterCountMap = Map Char Int
 
 strToPairRule :: String -> PairRule
-strToPairRule = (head &&& last) . words 
+strToPairRule = (head &&& last) . words
 
 main :: IO ()
 main = do
@@ -21,7 +23,7 @@ main = do
 
 
     putStrLn $ "Part 1: " ++ solve1 rules polymer
-    putStrLn $ "Part 2: " ++ "to be implemented"
+    putStrLn $ "Part 2: " ++ solve2 rules polymer
 
 
 windowOf :: Int -> [a] -> [[a]]
@@ -30,22 +32,67 @@ windowOf _ [x] = []
 windowOf n xs = take n xs : windowOf n (tail xs)
     where (as, bs) = splitAt n xs
 
-simulateStep :: PairRuleMap -> Polymer -> Polymer
-simulateStep prm ss = foldl folder [head ss] pairs
-    where pairs  = windowOf 2 ss
-          folder a x = case M.lookup x prm of
-                         Just val -> a ++ val ++ [last x]
-                         Nothing  -> a ++ [last x]
+processPair :: PairRuleMap -> String -> Int -> PolymerPairMap -> PolymerPairMap
+processPair prm p n ppm =
+    case M.lookup p prm of
+        Just x  ->
+            M.alter (alterer n) (x ++ [last p])
+            . M.alter (alterer n) (head p : x)
+            $ ppm
+        Nothing -> ppm
+    where alterer v ev = case ev of
+                          Just x  -> Just (x + v)
+                          Nothing -> Just v
 
-solve1 :: [PairRule] -> Polymer -> String
-solve1 prs = show
-    . uncurry (-)
-    . (maximum &&& minimum)
-    . M.elems
+
+simulateStep :: PairRuleMap -> PolymerPairMap -> PolymerPairMap
+simulateStep prm = M.foldrWithKey (processPair prm) M.empty
+
+mapMaybeWithDefault :: b -> (a -> b) -> Maybe a -> Maybe b
+mapMaybeWithDefault d fn m = case m of
+                               Just x -> Just (fn x)
+                               Nothing -> Just d
+
+countLetters :: String -> PolymerPairMap -> LetterCountMap
+countLetters p ppm =
+    M.alter (mapMaybeWithDefault 1 (+1)) (head p)
+    . M.fromList
+    . map (id &&& getCount)
+    $ letters
+    where letters    = nub . concat . M.keys $ ppm
+          entries    = M.toList ppm
+          getCount c = sum . map snd . filter ((c ==) . last . fst) $ entries
+
+runPairInsertion :: Int -> [PairRule] -> String -> PolymerPairMap
+runPairInsertion n prs = 
+    last
+    . take (n -- The number of steps
+            + 1)
+    . iterate (simulateStep rm)
     . M.fromListWith (+)
     . map (, 1)
-    . last
-    . take (10 -- The number of steps
-            + 1)
-    . iterate (simulateStep rulesMap)
-    where rulesMap = M.fromList prs
+    . windowOf 2
+    where rm  = M.fromList prs
+
+getLetterCountDiff :: LetterCountMap -> Int
+getLetterCountDiff = 
+    uncurry (-)
+    . (maximum &&& minimum)
+    . map snd
+    . M.toList
+
+solve1 :: [PairRule] -> String -> String
+solve1 prs p = show
+    . getLetterCountDiff
+    . countLetters p
+    . runPairInsertion 10 prs
+    $ p
+
+solve2 :: [PairRule] -> String -> String
+solve2 prs p = show
+    . getLetterCountDiff
+    . countLetters p
+    . runPairInsertion 40 prs
+    $ p
+
+
